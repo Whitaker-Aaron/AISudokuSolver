@@ -7,7 +7,9 @@ from sklearn.model_selection import train_test_split
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader
+from sklearn.metrics import classification_report, accuracy_score
 #import tensorflow as tf
 #from tensorflow import keras
 #from tensorflow.keras.models import Sequential
@@ -66,6 +68,7 @@ class ConvolutedSudokuModel(nn.Module):
 #print(quizzes)
 #print(solutions)
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 df = pd.read_csv('sudoku.csv')
 df_x = df['quizzes']
 df_y = df['solutions']
@@ -96,7 +99,8 @@ Y = np.array(Y)
 #X = X.reshape(-1, 9, 9)
 #Y = Y.reshape(-1, 9, 9) - 1
 
-X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size = 0.2)
+X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size = 0.99)
+_, X_test, _, y_test = train_test_split(X_test, y_test, test_size = 0.99)
 train_dat    = torch.utils.data.TensorDataset(torch.tensor(np.float32(X_train)), torch.tensor(np.float32(y_train)))
 train_loader = torch.utils.data.DataLoader(dataset = train_dat,
                                            batch_size = 64,
@@ -115,23 +119,86 @@ criterion = nn.CrossEntropyLoss()
 custom_optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay = 0.005)
 
 
-num_epochs = 3
-model_loss = np.zeros(num_epochs)
+num_epochs = 10
+model_train_loss = []
+model_train_accuracy = []
+model_test_loss = []
+model_test_accuracy = []
+print("Starting training")
+
 for epoch in range(num_epochs):
     model.train()
+    y_true = []
+    y_pred = []
     for x, y in train_loader:
+        x = x.to(device)
+        y = y.to(device)
         outputs = model(x)
+        _, predicted = torch.max(outputs, 1)
+        y_true.extend(y.cpu().numpy())
+        y_pred.extend(predicted.cpu().numpy())
+        
         #print(x)
         loss = criterion(outputs, (y).long())
-        print(loss)
-        
         custom_optimizer.zero_grad()
         loss.backward()
         custom_optimizer.step()
+        
+    
+    print(f'Epoch [{epoch+1}/{num_epochs}], Train Loss: {loss.item():.4f}, Train Accuracy: {np.equal(np.argmax((y_true), axis=-1), np.argmax(y_pred, axis=-1)).mean()}')
+    model_train_loss.append(loss.item())
+    model_train_accuracy.append(np.equal(np.argmax((y_true), axis=-1), np.argmax(y_pred, axis=-1)).mean())
+    
+    model.eval()
+    y_true = []
+    y_pred = []
+    for x, y in test_loader:
+        x = x.to(device)
+        y = y.to(device)
+        outputs = model(x)
+        _, predicted = torch.max(outputs, 1)
+        y_true.extend(y.cpu().numpy())
+        y_pred.extend(predicted.cpu().numpy())
+        #print(x)
+        loss = criterion(outputs, (y).long())
+    print(f'Epoch [{epoch+1}/{num_epochs}], Train Loss: {loss.item():.4f}, Train Accuracy: {np.equal(np.argmax((y_true), axis=-1), np.argmax(y_pred, axis=-1)).mean()}')
+    model_test_loss.append(loss.item())
+    model_test_accuracy.append(np.equal(np.argmax((y_true), axis=-1), np.argmax(y_pred, axis=-1)).mean())
+    
 
-    print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
-    model_loss.append(loss.item())
+print("Model train loss: ", model_train_loss)
+print("Model train accuracy: ", model_train_accuracy)
+print("Model test loss: ", model_test_loss)
+print("Model test accuracy: ", model_test_accuracy)
 
+y_axis = []
+i=1
+for epoch in range(num_epochs):
+    y_axis.append(i)
+    i += 1
+plt.plot(y_axis, model_train_loss)
+plt.ylabel('CNN Train loss')  
+plt.xlabel('Epochs')  
+plt.title('Train losses over epochs')  
+plt.show()
+
+plt.plot(y_axis, model_test_loss)
+plt.ylabel('CNN Test loss')  
+plt.xlabel('Epochs')  
+plt.title('Test losses over epochs')  
+plt.show()
+
+plt.plot(y_axis, model_train_accuracy)
+plt.ylabel('CNN Train Accuracy')  
+plt.xlabel('Epochs')  
+plt.title('Train accuracy over epochs')  
+plt.show()
+
+plt.plot(y_axis, model_test_accuracy)
+plt.ylabel('CNN Test Accuracy')  
+plt.xlabel('Epochs')  
+plt.title('Test accuracy over epochs')  
+plt.show()
 torch.save(model.state_dict(), "sudoku_cnn.pth")
 #torch.save({
 #            'epoch': 3,
@@ -143,6 +210,26 @@ torch.save(model.state_dict(), "sudoku_cnn.pth")
 #model = ConvolutedSudokuModel()
 #torch.serialization.add_safe_globals(['scalar'])
 #model.load_state_dict(torch.load("sudoku_cnn.pth", weights_only=False))
+
+#def evaluate_model(model, data_loader):
+#    model.eval()
+#    y_true = []
+#    y_pred = []
+#    with torch.no_grad():
+#        for x, y in data_loader:
+#            x, y = x.to(device), y.to(device)  # Move data to GPU
+#            outputs = model(x)
+#            _, predicted = torch.max(outputs, 1)
+#            print(predicted)
+#            y_true.extend(y.cpu().numpy())
+#            y_pred.extend(predicted.cpu().numpy())
+#    return np.equal(np.argmax(y_true, axis=-1), np.argmax(y_pred, axis=-1)).mean()
+#
+#y_true_custom, y_pred_custom = evaluate_model(model, test_loader)
+#print(y_true_custom)
+#print(y_pred_custom)
+#print("Custom Network Accuracy: ", accuracy_score(y_true_custom, y_pred_custom))
+#print("Accuracy: ", )
 
 
 #model = Sequential()
