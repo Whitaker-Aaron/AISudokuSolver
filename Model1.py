@@ -107,7 +107,7 @@ train_loader = torch.utils.data.DataLoader(dataset = train_dat,
                                            shuffle = True,
                                            )
 
-train_dat    = torch.utils.data.TensorDataset(torch.tensor(np.float32(X_test)), torch.tensor(np.float32(y_test)))
+test_dat    = torch.utils.data.TensorDataset(torch.tensor(np.float32(X_test)), torch.tensor(np.float32(y_test)))
 test_loader = torch.utils.data.DataLoader(dataset = train_dat,
                                            batch_size = 64,
                                            shuffle = True
@@ -119,7 +119,7 @@ criterion = nn.CrossEntropyLoss()
 custom_optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay = 0.005)
 
 
-num_epochs = 10
+num_epochs = 50
 model_train_loss = []
 model_train_accuracy = []
 model_test_loss = []
@@ -161,7 +161,7 @@ for epoch in range(num_epochs):
         y_pred.extend(predicted.cpu().numpy())
         #print(x)
         loss = criterion(outputs, (y).long())
-    print(f'Epoch [{epoch+1}/{num_epochs}], Train Loss: {loss.item():.4f}, Train Accuracy: {np.equal(np.argmax((y_true), axis=-1), np.argmax(y_pred, axis=-1)).mean()}')
+    print(f'Epoch [{epoch+1}/{num_epochs}], Test Loss: {loss.item():.4f}, Test Accuracy: {np.equal(np.argmax((y_true), axis=-1), np.argmax(y_pred, axis=-1)).mean()}')
     model_test_loss.append(loss.item())
     model_test_accuracy.append(np.equal(np.argmax((y_true), axis=-1), np.argmax(y_pred, axis=-1)).mean())
     
