@@ -48,27 +48,26 @@ def evaluate_model(quizzes, solutions, num_tests=100):
     total_correct = 0
     total_time = 0
 
-    for i in range(num_tests):  # Test on the first `num_tests` puzzles
+    for i in range(num_tests): 
         puzzle = quizzes[i].copy()
         solution = solutions[i]
         
-        start_time = time.time()  # Start timer
+        start_time = time.time()
         solved = solve_sudoku(puzzle)
-        end_time = time.time()  # End timer
+        end_time = time.time()  
         
-        total_time += (end_time - start_time)  # Accumulate solving time
+        total_time += (end_time - start_time)
         
-        # Check if solved correctly
         if solved and np.array_equal(puzzle, solution):
             total_correct += 1
 
-    accuracy = total_correct / num_tests * 100  # Calculate percentage accuracy
-    avg_time = total_time / num_tests  # Average time per puzzle
+    accuracy = total_correct / num_tests * 100  
+    avg_time = total_time / num_tests  
     
     return accuracy, avg_time
 
 # Run evaluation
-num_tests = 100  # Number of puzzles to test
+num_tests = 100  
 accuracy, avg_time = evaluate_model(quizzes, solutions, num_tests)
 
 print(f"Accuracy: {accuracy:.2f}%")
