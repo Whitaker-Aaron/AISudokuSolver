@@ -80,31 +80,31 @@ class DenseSudokuModel(nn.Module):
 
 #print(quizzes)
 #print(solutions)
-
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-df = pd.read_csv('sudoku.csv')
-df_x = df['quizzes']
-df_y = df['solutions']
+def train_model():
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    df = pd.read_csv('sudoku.csv')
+    df_x = df['quizzes']
+    df_y = df['solutions']
 
 #X = np.array(df.quizzes.map(lambda x: list(map(int, x))).to_list())
 #Y = np.array(df.solutions.map(lambda x: list(map(int, x))).to_list())
 
-X=[]
-Y=[]
-for i in df_x:
-    x = np.array([int(j) for j in i]).reshape((1,9,9))
-    X.append(x)
-        
-X = np.array(X)
-X = X/9
-X -= .5  
+    X=[]
+    Y=[]
+    for i in df_x:
+        x = np.array([int(j) for j in i]).reshape((1,9,9))
+        X.append(x)
+            
+    X = np.array(X)
+    X = X/9
+    X -= .5  
 
-for i in df_y:
-    
-        y = np.array([int(j) for j in i]).reshape((9,9)) - 1
-        Y.append(y)   
-    
-Y = np.array(Y)
+    for i in df_y:
+        
+            y = np.array([int(j) for j in i]).reshape((9,9)) - 1
+            Y.append(y)   
+        
+    Y = np.array(Y)
 
 #print(X)
 #print(Y)
@@ -112,107 +112,118 @@ Y = np.array(Y)
 #X = X.reshape(-1, 9, 9)
 #Y = Y.reshape(-1, 9, 9) - 1
 
-X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size = 0.99)
-_, X_test, _, y_test = train_test_split(X_test, y_test, test_size = 0.99)
-train_dat    = torch.utils.data.TensorDataset(torch.tensor(np.float32(X_train)), torch.tensor(np.float32(y_train)))
-train_loader = torch.utils.data.DataLoader(dataset = train_dat,
-                                           batch_size = 64,
-                                           shuffle = True,
-                                           )
+    X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size = 0.99)
+    _, X_test, _, y_test = train_test_split(X_test, y_test, test_size = 0.99)
+    train_dat    = torch.utils.data.TensorDataset(torch.tensor(np.float32(X_train)), torch.tensor(np.float32(y_train)))
+    train_loader = torch.utils.data.DataLoader(dataset = train_dat,
+                                            batch_size = 64,
+                                            shuffle = True,
+                                            )
 
-test_dat    = torch.utils.data.TensorDataset(torch.tensor(np.float32(X_test)), torch.tensor(np.float32(y_test)))
-test_loader = torch.utils.data.DataLoader(dataset = train_dat,
-                                           batch_size = 64,
-                                           shuffle = True
-                                           )
-print(X_train.shape)
+    test_dat    = torch.utils.data.TensorDataset(torch.tensor(np.float32(X_test)), torch.tensor(np.float32(y_test)))
+    test_loader = torch.utils.data.DataLoader(dataset = test_dat,
+                                            batch_size = 64,
+                                            shuffle = True
+                                            )
+    print(X_train.shape)
 
-model = DenseSudokuModel()
-criterion = nn.CrossEntropyLoss()
-custom_optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay = 0.005)
+    model = DenseSudokuModel()
+    criterion = nn.CrossEntropyLoss()
+    custom_optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay = 0.005)
 
 
-num_epochs = 50
-model_train_loss = []
-model_train_accuracy = []
-model_test_loss = []
-model_test_accuracy = []
-print("Starting training")
+    num_epochs = 15
+    model_train_loss = []
+    model_train_accuracy = []
+    model_test_loss = []
+    model_test_accuracy = []
+    print("Starting training")
 
-for epoch in range(num_epochs):
-    model.train()
-    y_true = []
-    y_pred = []
-    for x, y in train_loader:
-        x = x.to(device)
-        y = y.to(device)
-        outputs = model(x)
-        _, predicted = torch.max(outputs, 1)
-        y_true.extend(y.cpu().numpy())
-        y_pred.extend(predicted.cpu().numpy())
+    for epoch in range(num_epochs):
+        model.train()
+        correct = 0
+        i = 0
         
-        #print(x)
-        loss = criterion(outputs, (y).long())
-        custom_optimizer.zero_grad()
-        loss.backward()
-        custom_optimizer.step()
+        #correct=0
+        for x, y in train_loader:
+            #i=0
+            x = x.to(device)
+            y = y.to(device)
+            outputs = model(x)
+            _, predicted = torch.max(outputs, 1)
+            #y_true.extend(y.cpu().numpy())
+            #y_pred.extend(predicted.cpu().numpy())
+            loss = criterion(outputs, (y).long())
+            custom_optimizer.zero_grad()
+            loss.backward()
+            custom_optimizer.step()
+            for j in range(len(x)):
+                i+=1
+                if((test(model, x[j]) == y[j]+1).all()):
+                    correct+=1
+            print(correct/i)
+            #print(outputs)
+            #print(y)
+            
         
     
-    print(f'Epoch [{epoch+1}/{num_epochs}], Train Loss: {loss.item():.4f}, Train Accuracy: {np.equal(np.argmax((y_true), axis=-1), np.argmax(y_pred, axis=-1)).mean()}')
-    model_train_loss.append(loss.item())
-    model_train_accuracy.append(np.equal(np.argmax((y_true), axis=-1), np.argmax(y_pred, axis=-1)).mean())
+        #print(f'Epoch [{epoch+1}/{num_epochs}], Train Loss: {loss.item():.4f}, Train Accuracy: {np.equal(np.argmax((y_true), axis=-1), np.argmax(y_pred, axis=-1)).mean()}')
+        print(f'Epoch [{epoch+1}/{num_epochs}], Train Loss: {loss.item():.4f}, Train Accuracy: {correct/i}')
+        model_train_loss.append(loss.item())
+        #model_train_accuracy.append(np.equal(np.argmax((y_true), axis=-1), np.argmax(y_pred, axis=-1)).mean())
+        model_train_accuracy.append(correct/i)
     
-    model.eval()
-    y_true = []
-    y_pred = []
-    for x, y in test_loader:
-        x = x.to(device)
-        y = y.to(device)
-        outputs = model(x)
-        _, predicted = torch.max(outputs, 1)
-        y_true.extend(y.cpu().numpy())
-        y_pred.extend(predicted.cpu().numpy())
-        #print(x)
-        loss = criterion(outputs, (y).long())
-    print(f'Epoch [{epoch+1}/{num_epochs}], Test Loss: {loss.item():.4f}, Test Accuracy: {np.equal(np.argmax((y_true), axis=-1), np.argmax(y_pred, axis=-1)).mean()}')
-    model_test_loss.append(loss.item())
-    model_test_accuracy.append(np.equal(np.argmax((y_true), axis=-1), np.argmax(y_pred, axis=-1)).mean())
+        model.eval()
+        y_true = []
+        y_pred = []
+        for x, y in test_loader:
+            x = x.to(device)
+            y = y.to(device)
+            outputs = model(x)
+            _, predicted = torch.max(outputs, 1)
+            y_true.extend(y.cpu().numpy())
+            y_pred.extend(predicted.cpu().numpy())
+            #print(x)
+            loss = criterion(outputs, (y).long())
+        print(f'Epoch [{epoch+1}/{num_epochs}], Test Loss: {loss.item():.4f}, Test Accuracy: {np.equal(np.argmax((y_true), axis=-1), np.argmax(y_pred, axis=-1)).mean()}')
+        model_test_loss.append(loss.item())
+        model_test_accuracy.append(np.equal(np.argmax((y_true), axis=-1), np.argmax(y_pred, axis=-1)).mean())
     
 
-print("Model train loss: ", model_train_loss)
-print("Model train accuracy: ", model_train_accuracy)
-print("Model test loss: ", model_test_loss)
-print("Model test accuracy: ", model_test_accuracy)
+    print("Model train loss: ", model_train_loss)
+    print("Model train accuracy: ", model_train_accuracy)
+    print("Model test loss: ", model_test_loss)
+    print("Model test accuracy: ", model_test_accuracy)
 
-y_axis = []
-i=1
-for epoch in range(num_epochs):
-    y_axis.append(i)
-    i += 1
-plt.plot(y_axis, model_train_loss)
-plt.ylabel('DNN Train loss')  
-plt.xlabel('Epochs')  
-plt.title('Train losses over epochs')  
-plt.show()
+    y_axis = []
+    i=1
+    for epoch in range(num_epochs):
+        y_axis.append(i)
+        i += 1
+    plt.plot(y_axis, model_train_loss)
+    plt.ylabel('DNN Train loss')  
+    plt.xlabel('Epochs')  
+    plt.title('Train losses over epochs')  
+    plt.show()
 
-plt.plot(y_axis, model_test_loss)
-plt.ylabel('DNN Test loss')  
-plt.xlabel('Epochs')  
-plt.title('Test losses over epochs')  
-plt.show()
+    plt.plot(y_axis, model_test_loss)
+    plt.ylabel('DNN Test loss')  
+    plt.xlabel('Epochs')  
+    plt.title('Test losses over epochs')  
+    plt.show()
 
-plt.plot(y_axis, model_train_accuracy)
-plt.ylabel('DNN Train Accuracy')  
-plt.xlabel('Epochs')  
-plt.title('Train accuracy over epochs')  
-plt.show()
+    plt.plot(y_axis, model_train_accuracy)
+    plt.ylabel('DNN Train Accuracy')  
+    plt.xlabel('Epochs')  
+    plt.title('Train accuracy over epochs')  
+    plt.show()
 
-plt.plot(y_axis, model_test_accuracy)
-plt.ylabel('DNN Test Accuracy')  
-plt.xlabel('Epochs')  
-plt.title('Test accuracy over epochs')  
-plt.show()
-torch.save(model.state_dict(), "sudoku_dnn.pth")
+    plt.plot(y_axis, model_test_accuracy)
+    plt.ylabel('DNN Test Accuracy')  
+    plt.xlabel('Epochs')  
+    plt.title('Test accuracy over epochs')  
+    plt.show()
+    torch.save(model.state_dict(), "sudoku_dnn.pth")
 #torch.save({
 #            'epoch': 3,
 #            'model_state_dict': model.state_dict(),
@@ -220,29 +231,125 @@ torch.save(model.state_dict(), "sudoku_dnn.pth")
 #            'loss': model_loss[-1],
 #            }, 'sudoku_cnn.pth')
 
-#model = ConvolutedSudokuModel()
-#torch.serialization.add_safe_globals(['scalar'])
-#model.load_state_dict(torch.load("sudoku_cnn.pth", weights_only=False))
+def evaluate():
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    df = pd.read_csv('sudoku.csv')
+    df_x = df['quizzes']
+    df_y = df['solutions']
+    X=[]
+    Y=[]
 
-#def evaluate_model(model, data_loader):
-#    model.eval()
-#    y_true = []
-#    y_pred = []
-#    with torch.no_grad():
-#        for x, y in data_loader:
-#            x, y = x.to(device), y.to(device)  # Move data to GPU
-#            outputs = model(x)
-#            _, predicted = torch.max(outputs, 1)
-#            print(predicted)
-#            y_true.extend(y.cpu().numpy())
-#            y_pred.extend(predicted.cpu().numpy())
-#    return np.equal(np.argmax(y_true, axis=-1), np.argmax(y_pred, axis=-1)).mean()
-#
-#y_true_custom, y_pred_custom = evaluate_model(model, test_loader)
-#print(y_true_custom)
-#print(y_pred_custom)
-#print("Custom Network Accuracy: ", accuracy_score(y_true_custom, y_pred_custom))
-#print("Accuracy: ", )
+    for i in df_x:
+        x = np.array([int(j) for j in i]).reshape((1,9,9))
+        X.append(x)
+        
+    X = np.array(X)
+    X = X/9
+    X -= .5  
+
+    for i in df_y:
+    
+        y = np.array([int(j) for j in i]).reshape((9,9)) - 1
+        Y.append(y)   
+    
+    Y = np.array(Y)
+
+    X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size = 0.99)
+    _, X_test, _, y_test = train_test_split(X_test, y_test, test_size = 0.99)
+    train_dat    = torch.utils.data.TensorDataset(torch.tensor(np.float32(X_train)), torch.tensor(np.float32(y_train)))
+    train_loader = torch.utils.data.DataLoader(dataset = train_dat,
+                                           batch_size = 64,
+                                           shuffle = True,
+                                           )
+
+    test_dat    = torch.utils.data.TensorDataset(torch.tensor(np.float32(X_test)), torch.tensor(np.float32(y_test)))
+    test_loader = torch.utils.data.DataLoader(dataset = test_dat,
+                                           batch_size = 64,
+                                           shuffle = True
+                                           )
+    model = DenseSudokuModel()
+    model.load_state_dict(torch.load("sudoku_dnn.pth", weights_only=False))
+
+    def evaluate_model(model, data_loader):
+        model.eval()
+        y_true = []
+        y_pred = []
+        i=0
+        correct = 0
+        with torch.no_grad():
+            for x, y in data_loader:
+                x, y = x.to(device), y.to(device)  # Move data to GPU
+                #print("Input: ", x)
+                outputs = model(x)
+                #_, predicted = torch.max(outputs, 1)
+                for j in range(len(x)):
+                    i+=1
+                    pred = test(model, x[j])
+                    print(pred)
+                    print(y[j]+1)
+                    if((pred == y[j]+1).all()):
+                        correct+=1
+                print(correct/i)
+        return(correct/i)
+
+    accuracy = evaluate_model(model, test_loader)
+    print("Accuracy: ", accuracy)
+
+def denorm(a):
+    return (a+.5)*9
+def norm(a):
+    return (a/9)-.5
+
+def test(model, input):
+    sample = input.clone()
+    while(True):
+
+        output = model(sample.reshape(1,1,9,9)) 
+        pred = torch.argmax(output, axis=1).reshape((9,9)) + 1
+        prob,_ = torch.max(output, axis=1)
+        sample = denorm(sample).reshape((9,9))
+        mask = (sample==0)
+        #break
+        if(mask.sum()==0):
+            break
+        #prob = torch.sigmoid(prob)   
+        prob_new = prob.flatten() * mask.flatten()
+    
+        ind = torch.argmax(prob_new)
+        x, y = (ind//9), (ind%9)
+
+        val = pred[x][y]
+        sample[x][y] = val
+        sample = norm(sample)
+        #print(output)
+        #break
+    return pred
+
+def predict(puzzle):
+    model = DenseSudokuModel()
+    model.load_state_dict(torch.load("sudoku_dnn.pth", weights_only=False))
+    sample = puzzle.clone()
+    while(True):
+
+        output = model(sample.reshape(1,1,9,9)) 
+        pred = torch.argmax(output, axis=1).reshape((9,9)) + 1
+        prob,_ = torch.max(output, axis=1)
+        sample = denorm(sample).reshape((9,9))
+        mask = (sample==0)
+        if(mask.sum()==0):
+            break
+        #prob = torch.sigmoid(prob)   
+        prob_new = prob.flatten() * mask.flatten()
+    
+        ind = torch.argmax(prob_new)
+        x, y = (ind//9), (ind%9)
+
+        val = pred[x][y]
+        sample[x][y] = val
+        sample = norm(sample)
+        #print(output)
+        #break
+    return pred
 
 
 #model = Sequential()
