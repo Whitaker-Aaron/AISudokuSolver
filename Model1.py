@@ -350,7 +350,7 @@ def evaluate():
     Y = np.array(Y)
 
     X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size = 0.99)
-    _, X_test, _, y_test = train_test_split(X_test, y_test, test_size = 0.99)
+    X_test, _, y_test, _ = train_test_split(X_test, y_test, test_size = 0.99)
     train_dat    = torch.utils.data.TensorDataset(torch.tensor(np.float32(X_train)), torch.tensor(np.float32(y_train)))
     train_loader = torch.utils.data.DataLoader(dataset = train_dat,
                                            batch_size = 64,
@@ -364,7 +364,7 @@ def evaluate():
                                            )
     model = ConvolutedSudokuModel()
     model.load_state_dict(torch.load("sudoku_cnn.pth", weights_only=False))
-
+    print("Starting evaluation")
     def evaluate_model(model, data_loader):
         model.eval()
         y_true = []
@@ -380,10 +380,8 @@ def evaluate():
         return np.equal(np.argmax(y_true, axis=-1), np.argmax(y_pred, axis=-1)).mean()
 
     accuracy = evaluate_model(model, test_loader)
-    #print(y_true_custom)
-    #print(y_pred_custom)
-    #print("Custom Network Accuracy: ", accuracy_score(y_true_custom, y_pred_custom))
     print("Accuracy: ", accuracy)
+    return accuracy
 
 def denorm(a):
     return (a+.5)*9

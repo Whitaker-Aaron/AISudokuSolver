@@ -16,6 +16,27 @@ for i, line in enumerate(open('sudoku.csv', 'r').read().splitlines()[1:]):
 quizzes = quizzes.reshape((-1, 9, 9))
 solutions = solutions.reshape((-1, 9, 9))   
 
+def display_options():
+    m = tk.Tk()
+    m.geometry('200x200')
+    m.height = 200
+    predict_button = tk.Button(m, text='Predict', width=25, command= lambda : run_interface())
+    predict_button.pack()
+    evaluate_button = tk.Button(m, text='Evaluate', width=25, command= lambda : display_evaluation_options())
+    evaluate_button.pack()
+    m.mainloop()
+    
+def display_evaluation_options():
+    m = tk.Tk()
+    m.geometry('200x200')
+    eval_m1_button = tk.Button(m, text='Evaluate Convoluted Model', width=25, command= lambda : eval_m1(m))
+    eval_m1_button.pack()
+    eval_m2_button = tk.Button(m, text='Evaluate Dense Convoluted Model', width=25, command= lambda : eval_m2(m))
+    eval_m2_button.pack()
+    eval_m3_button = tk.Button(m, text='Evaluate Backtracking Model', width=25, command= lambda : eval_m3(m))
+    eval_m3_button.pack()
+    m.mainloop()
+
 def run_interface():
     rows = 'ABCDEFGHI'
     cols = '123456789'
@@ -36,6 +57,7 @@ def run_interface():
     m3_button.pack()
     
     m.mainloop()
+    
 
 def displaym1_prediction(quiz, sol):
     m = tk.Tk()
@@ -57,7 +79,7 @@ def displaym1_prediction(quiz, sol):
     sol_title.pack()
     sol_label.pack()
     cor_label.pack()
-    
+    m.title('Result')
     m.mainloop()
     pass
 
@@ -81,7 +103,7 @@ def displaym2_prediction(quiz, sol):
     sol_title.pack()
     sol_label.pack()
     cor_label.pack()
-    
+    m.title('Result')
     m.mainloop()
     pass
 
@@ -105,9 +127,29 @@ def displaym3_prediction(quiz, sol):
     sol_title.pack()
     sol_label.pack()
     cor_label.pack()
-    
+    m.title('Result')
     m.mainloop()
+   
+def eval_m1(prev_window):
+    accuracy = Model1.evaluate() 
+    prev_window.destroy()
+    display_accuracy(accuracy)
     
+def eval_m2(prev_window):
+    accuracy = Model2.evaluate() 
+    prev_window.destroy()
+    display_accuracy(accuracy)
+    
+def eval_m3(prev_window):
+    accuracy = Model3.evaluate() 
+    prev_window.destroy()
+    display_accuracy(accuracy)
+    
+def display_accuracy(acc):
+    m = tk.Tk()
+    acc_label = tk.Label(m, text=("Model's accuracy: " + str(acc)))
+    acc_label.pack()
+    m.mainloop()
 
 def format_grid(puzzle):
     text = ""
@@ -174,6 +216,8 @@ def norm(a):
 
 def predict_m1(quiz):
     pred= Model1.predict(norm(torch.tensor(quiz.reshape((9,9,1)))))
+    print(pred)
+    pred = pred.numpy()
     return pred
     
 def predict_m2(quiz):
@@ -184,7 +228,7 @@ def predict_m3(quiz, sol):
     pred = Model3.predict(quiz, sol)
     return pred
     
-run_interface()
+display_options()
 
 #print(quizzes[2])
 #print(solutions[2])

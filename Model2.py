@@ -294,6 +294,7 @@ def evaluate():
 
     accuracy = evaluate_model(model, test_loader)
     print("Accuracy: ", accuracy)
+    return accuracy
 
 def denorm(a):
     return (a+.5)*9

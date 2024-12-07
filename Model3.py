@@ -64,7 +64,7 @@ def evaluate_model(quizzes, solutions, num_tests=100):
     accuracy = total_correct / num_tests * 100  
     avg_time = total_time / num_tests  
     
-    return accuracy, avg_time, puzzle
+    return accuracy, avg_time
 
 def predict_puzzle(quiz, sol):
     total_time = 0
@@ -102,4 +102,5 @@ def evaluate():
         print(test_puzzle)
     else:
         print("no solutiuon exists")
+    return accuracy
 
