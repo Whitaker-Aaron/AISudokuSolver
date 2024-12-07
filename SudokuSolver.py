@@ -1,7 +1,9 @@
 import Model1, Model2, Model3 
 import numpy as np
 import pandas as pd
+import tkinter as tk
 import torch
+import random
 
 quizzes = np.zeros((1000000, 81), np.int32)
 solutions = np.zeros((1000000, 81), np.int32)
@@ -13,6 +15,115 @@ for i, line in enumerate(open('sudoku.csv', 'r').read().splitlines()[1:]):
         solutions[i, j] = s
 quizzes = quizzes.reshape((-1, 9, 9))
 solutions = solutions.reshape((-1, 9, 9))   
+
+def run_interface():
+    rows = 'ABCDEFGHI'
+    cols = '123456789'
+    text = ''
+    rand_index = random.randint(1,999999)
+    puzzle = quizzes[rand_index]
+    sol = solutions[rand_index]
+     
+    text = format_grid(puzzle)
+    m = tk.Tk()
+    grid = tk.Label(m, text=text)
+    grid.pack()
+    m1_button = tk.Button(m, text='Convoluted Model', width=25, command= lambda : displaym1_prediction(puzzle, sol))
+    m2_button = tk.Button(m, text='Dense Convoluted Model', width=25, command= lambda: displaym2_prediction(puzzle, sol))
+    m3_button = tk.Button(m, text='Backtracking Model', width=25, command= lambda: displaym3_prediction(puzzle, sol))
+    m1_button.pack()
+    m2_button.pack()
+    m3_button.pack()
+    
+    m.mainloop()
+
+def displaym1_prediction(quiz, sol):
+    m = tk.Tk()
+    pred = predict_m1(quiz)
+    prediction_grid = format_grid(pred)
+    sol_grid = format_grid(sol)
+    pred_label = tk.Label(m, text=prediction_grid)
+    pred_title = tk.Label(m, text='Prediction: ')
+    sol_label = tk.Label(m, text=sol_grid)
+    sol_title = tk.Label(m, text='Solution: ')
+    correct_text = ""
+    if(sol == pred).all():
+        correct_text = "Solved correctly!"
+    else:
+        correct_text = "Incorrect solution"
+    cor_label = tk.Label(m, text=correct_text)
+    pred_title.pack()
+    pred_label.pack()
+    sol_title.pack()
+    sol_label.pack()
+    cor_label.pack()
+    
+    m.mainloop()
+    pass
+
+def displaym2_prediction(quiz, sol):
+    m = tk.Tk()
+    pred = predict_m2(quiz)
+    prediction_grid = format_grid(pred)
+    sol_grid = format_grid(sol)
+    pred_label = tk.Label(m, text=prediction_grid)
+    pred_title = tk.Label(m, text='Prediction: ')
+    sol_label = tk.Label(m, text=sol_grid)
+    sol_title = tk.Label(m, text='Solution: ')
+    correct_text = ""
+    if(sol == pred).all():
+        correct_text = "Solved correctly!"
+    else:
+        correct_text = "Incorrect solution"
+    cor_label = tk.Label(m, text=correct_text)
+    pred_title.pack()
+    pred_label.pack()
+    sol_title.pack()
+    sol_label.pack()
+    cor_label.pack()
+    
+    m.mainloop()
+    pass
+
+def displaym3_prediction(quiz, sol):
+    m = tk.Tk()
+    pred = predict_m3(quiz, sol)
+    prediction_grid = format_grid(pred)
+    sol_grid = format_grid(sol)
+    pred_label = tk.Label(m, text=prediction_grid)
+    pred_title = tk.Label(m, text='Prediction: ')
+    sol_label = tk.Label(m, text=sol_grid)
+    sol_title = tk.Label(m, text='Solution: ')
+    correct_text = ""
+    if(sol == pred).all():
+        correct_text = "Solved correctly!"
+    else:
+        correct_text = "Incorrect solution"
+    cor_label = tk.Label(m, text=correct_text)
+    pred_title.pack()
+    pred_label.pack()
+    sol_title.pack()
+    sol_label.pack()
+    cor_label.pack()
+    
+    m.mainloop()
+    
+
+def format_grid(puzzle):
+    text = ""
+    for i in range(len(puzzle)):
+        if i % 3 == 0 and i != 0:
+            text += "- - - - - - - - - - - - - \n"
+
+        for j in range(len(puzzle[0])):
+            if j % 3 == 0 and j != 0:
+                text += " | "
+
+            if j == 8:
+                text += (str(puzzle[i][j]) + "\n")
+            else:
+                text+=(str(puzzle[i][j]))  
+    return text
 
 #print(quizzes.shape)
 #print(solutions.shape)
@@ -42,7 +153,7 @@ solutions = solutions.reshape((-1, 9, 9))
 #print(Y.shape)
 
 
-Model1.train_model()
+#Model1.train_model()
 #Model1.evaluate()
 
 #Model2.train_model()
@@ -60,10 +171,26 @@ def denorm(a):
 
 def norm(a):
     return (a/9)-.5
-print(quizzes[2])
-print(solutions[2])
-pred = Model1.predict(norm(torch.tensor(quizzes[2].reshape((9,9,1)))))
-print(pred)
+
+def predict_m1(quiz):
+    pred= Model1.predict(norm(torch.tensor(quiz.reshape((9,9,1)))))
+    return pred
+    
+def predict_m2(quiz):
+    pred= Model2.predict(norm(torch.tensor(quiz.reshape((9,9,1)))))
+    return pred
+
+def predict_m3(quiz, sol):
+    pred = Model3.predict(quiz, sol)
+    return pred
+    
+run_interface()
+
+#print(quizzes[2])
+#print(solutions[2])
+#pred = Model1.predict(norm(torch.tensor(quizzes[2].reshape((9,9,1)))))
+#pred = Model3.predict(quizzes[2], solutions[2])
+#print(pred)
 
 #for quiz, sol in test_loader:
 #    print(quiz)

@@ -15,8 +15,8 @@ for i, line in enumerate(open('sudoku.csv', 'r').read().splitlines()[1:]):
 quizzes = quizzes.reshape((-1, 9, 9))
 solutions = solutions.reshape((-1, 9, 9))
 
-print(quizzes[0])
-print(solutions[0])
+#print(quizzes[0])
+#print(solutions[0])
 
 def is_valid(board, row, col, num):
     if num in board[row]:
@@ -64,20 +64,42 @@ def evaluate_model(quizzes, solutions, num_tests=100):
     accuracy = total_correct / num_tests * 100  
     avg_time = total_time / num_tests  
     
-    return accuracy, avg_time
+    return accuracy, avg_time, puzzle
 
-# Run evaluation
-num_tests = 100  
-accuracy, avg_time = evaluate_model(quizzes, solutions, num_tests)
+def predict_puzzle(quiz, sol):
+    total_time = 0
+    puzzle = quiz.copy()
+    solution = sol
+    
+    start_time = time.time()
+    solved = solve_sudoku(puzzle)
+    end_time = time.time()  
+        
+    total_time += (end_time - start_time)
+    
+    #accuracy = total_correct / num_tests * 100  
+    avg_time = total_time / 1  
+    
+    return avg_time, puzzle
 
-print(f"Accuracy: {accuracy:.2f}%")
-print(f"Average Time per Puzzle: {avg_time:.4f} seconds")
+def predict(quiz, sol):
+    avg_time, solved_puzzle = predict_puzzle(quiz, sol)
+    return solved_puzzle
 
-test_puzzle = quizzes[0].copy()
-print("Original Puzzle:")
-print(test_puzzle)
-if solve_sudoku(test_puzzle):
-    print("Solved Puzzle!:")
+def evaluate():
+    # Run evaluation
+    num_tests = 100  
+    accuracy, avg_time = evaluate_model(quizzes, solutions, num_tests)
+
+    print(f"Accuracy: {accuracy:.2f}%")
+    print(f"Average Time per Puzzle: {avg_time:.4f} seconds")
+
+    test_puzzle = quizzes[0].copy()
+    print("Original Puzzle:")
     print(test_puzzle)
-else:
-    print("no solutiuon exists")
+    if solve_sudoku(test_puzzle):
+        print("Solved Puzzle!:")
+        print(test_puzzle)
+    else:
+        print("no solutiuon exists")
+
