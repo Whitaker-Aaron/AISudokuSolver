@@ -3,20 +3,15 @@
 import numpy as np
 import pandas as pd
 import sklearn as sk
+import time
 from sklearn.model_selection import train_test_split
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import matplotlib.pyplot as plt
+import statistics
 from torch.utils.data import DataLoader
-from sklearn.metrics import classification_report, accuracy_score
-#import tensorflow as tf
-#from tensorflow import keras
-#from tensorflow.keras.models import Sequential
-#from tensorflow.keras.layers import Activation, Reshape, Dropout, Dense, Flatten, BatchNormalization, Conv2D, MaxPooling2D,BatchNormalization
-#from tensorflow.keras.optimizers import RMSprop
-#from tensorflow.keras.optimizers import Adam, SGD, RMSprop
-
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, classification_report, confusion_matrix
 
 
 class ConvolutedSudokuModel(nn.Module):
@@ -85,9 +80,6 @@ class ConvolutedSudokuModel(nn.Module):
 
         
         self.last_conv = nn.Conv2d(512, 9, 1)
-        #self.max_pool2 = nn.MaxPool2d(kernel_size = 2, stride = 2, padding = 1)
-        
-        #self.fc1 = nn.Linear(1, 128)
         
     def forward(self, x):
         out = self.conv_layer1(x)
@@ -158,25 +150,6 @@ class ConvolutedSudokuModel(nn.Module):
         out = self.last_conv(out)
         return out
 
-#Loads sudoku.csv dataset
-#quizzes = np.zeros((1000000, 81), np.int32)
-#solutions = np.zeros((1000000, 81), np.int32)
-#for i, line in enumerate(open('sudoku.csv', 'r').read().splitlines()[1:]):
-#    quiz, solution = line.split(",")
-#    for j, q_s in enumerate(zip(quiz, solution)):
-#        q, s = q_s
-#        quizzes[i, j] = q
-#        solutions[i, j] = s
-#quizzes = quizzes.reshape((-1, 9, 9))
-#solutions = solutions.reshape((-1, 9, 9))   
-
-#print(quizzes)
-#print(solutions)
-
-
-
-#X = np.array(df.quizzes.map(lambda x: list(map(int, x))).to_list())
-#Y = np.array(df.solutions.map(lambda x: list(map(int, x))).to_list())
 def train_model():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     df = pd.read_csv('sudoku.csv')
@@ -264,6 +237,7 @@ def train_model():
             _, predicted = torch.max(outputs, 1)
             y_true.extend(y.cpu().numpy())
             y_pred.extend(predicted.cpu().numpy())
+            
             #print(x)
             loss = criterion(outputs, (y).long())
         print(f'Epoch [{epoch+1}/{num_epochs}], Test Loss: {loss.item():.4f}, Test Accuracy: {np.equal(np.argmax((y_true), axis=-1), np.argmax(y_pred, axis=-1)).mean()}')
@@ -306,25 +280,6 @@ def train_model():
     plt.show()
     torch.save(model.state_dict(), "sudoku_cnn.pth")
     
-
-
-
-#print(X)
-#print(Y)
-
-#X = X.reshape(-1, 9, 9)
-#Y = Y.reshape(-1, 9, 9) - 1
-
-
-
-
-
-#torch.save({
-#            'epoch': 3,
-#            'model_state_dict': model.state_dict(),
-#            'optimizer_state_dict': custom_optimizer.state_dict(),
-#            'loss': model_loss[-1],
-#            }, 'sudoku_cnn.pth')
 
 def evaluate():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -369,19 +324,57 @@ def evaluate():
         model.eval()
         y_true = []
         y_pred = []
+        f1_total = []
+        precision_total = []
+        recall_total = []
+        total_time = 0
+        i = 0
         with torch.no_grad():
             for x, y in data_loader:
+                i+=1
                 x, y = x.to(device), y.to(device)  # Move data to GPU
+                start_time = time.time()
                 outputs = model(x)
+                end_time = time.time()  
                 _, predicted = torch.max(outputs, 1)
+                total_time += (end_time - start_time)
                 #print(predicted)
                 y_true.extend(y.cpu().numpy())
                 y_pred.extend(predicted.cpu().numpy())
-        return np.equal(np.argmax(y_true, axis=-1), np.argmax(y_pred, axis=-1)).mean()
+                print( np.argmax(predicted[0], axis=-1))
+                print(np.argmax(y[0], axis=-1))
+                j=0
+                f1=0
+                for i in range(9):
+                    f1+=f1_score( np.argmax(predicted[j], axis=-1), np.argmax(y[j], axis=-1),  average="macro")
+                    j+=1
+                f1_total.append(f1/j)
+                j=0
+                precision=0
+                for i in range(9):
+                    precision+=precision_score( np.argmax(predicted[j], axis=-1), np.argmax(y[j], axis=-1),  average="macro")
+                    j+=1
+                precision_total.append(precision/j)
+                j=0
+                recall=0
+                for i in range(9):
+                    recall+=recall_score( np.argmax(predicted[j], axis=-1), np.argmax(y[j], axis=-1),  average="macro")
+                    j+=1
+                recall_total.append(recall/j)
+        avg_time = total_time / i
+        avg_f1 = statistics.mean(f1_total)
+        avg_precision = statistics.mean(precision_total)
+        avg_recall = statistics.mean(recall_total)
+        print("Average f1: ", avg_f1)
+        print("Average precision: ", avg_precision)
+        print("Average recall: ", avg_recall)
+        return np.equal(np.argmax(y_true, axis=-1), np.argmax(y_pred, axis=-1)).mean(), avg_time, avg_f1, avg_precision, avg_recall
 
-    accuracy = evaluate_model(model, test_loader)
+    accuracy, avg_time, avg_f1, avg_precision, avg_recall = evaluate_model(model, test_loader)
+    
     print("Accuracy: ", accuracy)
-    return accuracy
+    print("Average time: ", avg_time)
+    return accuracy, avg_time, avg_f1, avg_precision, avg_recall
 
 def denorm(a):
     return (a+.5)*9
@@ -403,48 +396,4 @@ def predict(puzzle):
         if(mask.sum()==0):
             break
         break
-        #prob = torch.sigmoid(prob)   
-        prob_new = prob.flatten() * mask.flatten()
-    
-        ind = torch.argmax(prob_new)
-        x, y = (ind//9), (ind%9)
-
-        val = pred[x][y]
-        sample[x][y] = val
-        sample = norm(sample)
-        #print(output)
-        #break
     return pred
-
-
-#model = Sequential()
-#model.add(Conv2D(128, 3, activation='relu', padding='same', input_shape=(9,9,1)))
-#model.add(BatchNormalization())
-#model.add(Conv2D(128, 3, activation='relu', padding='same'))
-#model.add(BatchNormalization())
-#model.add(Conv2D(256, 3, activation='relu', padding='same'))
-#model.add(BatchNormalization())
-#model.add(Conv2D(256, 3, activation='relu', padding='same'))
-#model.add(BatchNormalization())
-#model.add(Conv2D(512, 3, activation='relu', padding='same'))
-#model.add(BatchNormalization())
-#model.add(Conv2D(512, 3, activation='relu', padding='same'))
-#model.add(BatchNormalization())
-#model.add(Conv2D(1024, 3, activation='relu', padding='same'))
-#model.add(BatchNormalization())
-#model.add(Conv2D(9, 1, activation='relu', padding='same'))
-#model.add(Flatten())
-#model.add(Dense(512))
-#model.add(Dense(81*9))
-#model.add(tf.keras.layers.LayerNormalization(axis=-1))
-#model.add(Reshape((9, 9, 9)))
-#model.add(Activation('softmax'))
-#model.compile(loss='sparse_categorical_crossentropy', 
-#               optimizer=Adam(
-#                learning_rate=0.001
-#    ),
-#    metrics=['accuracy'])
-#model.summary()
-#callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=3)
-#history = model.fit(X_train, y_train, batch_size = 64, epochs = 100,validation_data=(X_test, y_test), callbacks=[callback])
-#model.evaluate(X_test, y_test)
